@@ -6,7 +6,7 @@ from level import Level
 class Game:
     def __init__(self) -> None:
         init()
-        self.display_surface = display.set_mode((SCREEN_WIDTH * .6, SCREEN_HEIGHT))
+        self.display_surface = display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         display.set_caption('Stardew Inspired')
         
         self.running = True

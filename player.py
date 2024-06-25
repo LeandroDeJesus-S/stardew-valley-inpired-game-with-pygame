@@ -21,6 +21,7 @@ class Player(sprite.Sprite):
         # general setup
         self.image = self.animations[self.status][self.frame_index]
         self.rect = self.image.get_frect(topleft=pos)
+        self.z = LAYERS['main']
         
         # movement 
         self._direction = Vector2()
@@ -28,11 +29,21 @@ class Player(sprite.Sprite):
         self.speed = 100
 
         # tools
-        self.selected_tool = 'axe'
+        self.tools = ['hoe', 'water', 'axe']
+        self.tool_index = 0
+        self.selected_tool = self.tools[self.tool_index]
+        
+        # seeds
+        self.seeds = ['corn', 'tomato']
+        self.seed_index = 0
+        self.selected_seed = self.seeds[self.seed_index]
 
         # timer
         self.timers = {
-            'tool_use': Timer(600, self.use_tool)
+            'tool_use': Timer(600, self.use_tool),
+            'tool_change': Timer(600),
+            'seed_use': Timer(600, self.use_seed),
+            'seed_change': Timer(600),
         }
     
     @property
@@ -64,6 +75,30 @@ class Player(sprite.Sprite):
             self.timers['tool_use'].activate()
             self.direction = Vector2()
             self.frame_index = 0
+        
+        # tool changing
+        if keys[K_e] and not self.timers['tool_change'].active:
+            self.timers['tool_change'].activate()
+            self.tool_index += 1
+            if self.tool_index >= len(self.tools):
+                self.tool_index = 0
+                
+            self.selected_tool = self.tools[self.tool_index]
+        
+        # seed use
+        if keys[K_LCTRL]:
+            self.timers['seed_use'].activate()
+            self.direction = Vector2()
+            self.frame_index = 0
+        
+        # seed changing
+        if keys[K_q] and not self.timers['seed_change'].active:
+            self.timers['seed_change'].activate()
+            self.seed_index += 1
+            if self.seed_index >= len(self.seeds):
+                self.seed_index = 0
+
+            self.selected_seed = self.seeds[self.seed_index]
 
     def get_status(self):
         if self.timers['tool_use'].active:
@@ -103,6 +138,9 @@ class Player(sprite.Sprite):
 
     def use_tool(self):
         print('use_tool')
+    
+    def use_seed(self):
+        print('use_seed')
     
     def update_timers(self):
         list(map(lambda t: t.update(), self.timers.values()))
