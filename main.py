@@ -7,7 +7,7 @@ class Game:
     def __init__(self) -> None:
         init()
         self.display_surface = display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        display.set_caption('Stardew Inspired')
+        display.set_caption('Stardew Valley Inspired')
         
         self.running = True
         self.clock = time.Clock()

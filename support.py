@@ -1,7 +1,6 @@
 from os import walk
 from os.path import join
 from pygame.image import load
-from itertools import combinations
 from pygame import font, display
 
 

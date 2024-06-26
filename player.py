@@ -9,8 +9,10 @@ from re import sub
 
 
 class Player(sprite.Sprite):
-    def __init__(self, pos, *groups) -> None:
+    def __init__(self, pos, groups, ground, collision_sprites) -> None:
         super().__init__(*groups)
+        self.ground = ground
+
         # animations
         self.animations_dir = 'graphics/character'
         self.animations = self.import_assets()
@@ -26,7 +28,13 @@ class Player(sprite.Sprite):
         # movement 
         self._direction = Vector2()
         self.pos = Vector2(self.rect.center)
-        self.speed = 100
+        self.speed = 200
+        self.last_position = None
+
+        
+        # collision
+        self.hitbox = self.rect.inflate(-120, -70)
+        self.collision_sprites = collision_sprites
 
         # tools
         self.tools = ['hoe', 'water', 'axe']
@@ -62,11 +70,12 @@ class Player(sprite.Sprite):
     def inputs(self):
         if self.timers['tool_use'].active:
             return
-        
         keys = key.get_pressed()
         # directions
         x = int(keys[K_d]) - int(keys[K_a])
         y = int(keys[K_s]) - int(keys[K_w])
+        if x != 0 or y != 0:
+            self.last_position = self.pos.copy()
 
         self.direction = Vector2(x, y)
 
@@ -114,11 +123,15 @@ class Player(sprite.Sprite):
     
     def move(self, dt):
         self.pos.x += self.direction.x * self.speed * dt
+        self.pos.x =  max(0, min(self.pos.x, self.ground.image.width))
+
         self.pos.y += self.direction.y * self.speed * dt
+        self.pos.y = max(0, min(self.pos.y, self.ground.image.height))
 
         self.rect.centerx = self.pos.x
         self.rect.centery = self.pos.y
-    
+        self.hitbox.center = self.pos
+
     def import_assets(self):
         animations = dict(map(lambda ad: (ad, []), os.listdir(self.animations_dir)))
         
@@ -145,6 +158,11 @@ class Player(sprite.Sprite):
     def update_timers(self):
         list(map(lambda t: t.update(), self.timers.values()))
 
+    def collision(self):
+        for sprite in self.collision_sprites.sprites():
+            if hasattr(sprite, 'hitbox') and self.hitbox.colliderect(sprite.hitbox):
+                self.pos = self.last_position
+
     def update(self, dt):
         self.inputs()
         debug(f'direction: {self.direction}', (20, 20))
@@ -156,5 +174,7 @@ class Player(sprite.Sprite):
         self.update_timers()
         
         self.move(dt)
+        self.collision()
         self.animate(dt)
         
+        # debug(f'{self}')
