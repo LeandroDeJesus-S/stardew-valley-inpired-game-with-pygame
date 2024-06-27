@@ -9,7 +9,7 @@ from re import sub
 
 
 class Player(sprite.Sprite):
-    def __init__(self, pos, groups, ground, collision_sprites) -> None:
+    def __init__(self, pos, groups, ground, collision_sprites, tree_sprites, interaction_sprites) -> None:
         super().__init__(*groups)
         self.ground = ground
 
@@ -46,6 +46,19 @@ class Player(sprite.Sprite):
         self.seed_index = 0
         self.selected_seed = self.seeds[self.seed_index]
 
+        # interactions
+        self.tree_sprites = tree_sprites
+        self.interaction_sprites = interaction_sprites
+        self.sleeping = False
+
+        # inventory
+        self.inventory = {
+            'wood': 0,
+            'apple': 0,
+            'corn': 0,
+            'tomato': 0,
+        }
+
         # timer
         self.timers = {
             'tool_use': Timer(600, self.use_tool),
@@ -68,8 +81,9 @@ class Player(sprite.Sprite):
             self._direction = self._direction.normalize()
 
     def inputs(self):
-        if self.timers['tool_use'].active:
+        if self.timers['tool_use'].active or self.sleeping:
             return
+        
         keys = key.get_pressed()
         # directions
         x = int(keys[K_d]) - int(keys[K_a])
@@ -108,6 +122,18 @@ class Player(sprite.Sprite):
                 self.seed_index = 0
 
             self.selected_seed = self.seeds[self.seed_index]
+        
+        # restarting day
+        if keys[K_RETURN]:
+            interactions = sprite.spritecollide(self, self.interaction_sprites, False)
+            for interaction in interactions:
+                if interaction.name == 'Trader': ...
+
+                if interaction.name == 'Bed':
+                    self.sleeping = True
+
+
+
 
     def get_status(self):
         if self.timers['tool_use'].active:
@@ -124,13 +150,16 @@ class Player(sprite.Sprite):
     def move(self, dt):
         self.pos.x += self.direction.x * self.speed * dt
         self.pos.x =  max(0, min(self.pos.x, self.ground.image.width))
+        self.hitbox.centerx = self.pos.x
+        self.rect.centerx = self.hitbox.centerx
+        self.collision('horizontal')
 
         self.pos.y += self.direction.y * self.speed * dt
         self.pos.y = max(0, min(self.pos.y, self.ground.image.height))
+        self.hitbox.centery = self.pos.y
+        self.rect.centery = self.hitbox.centery
+        self.collision('vertical')
 
-        self.rect.centerx = self.pos.x
-        self.rect.centery = self.pos.y
-        self.hitbox.center = self.pos
 
     def import_assets(self):
         animations = dict(map(lambda ad: (ad, []), os.listdir(self.animations_dir)))
@@ -149,8 +178,21 @@ class Player(sprite.Sprite):
         
         self.image = frames[int(self.frame_index)]
 
+    def get_target_pos(self):
+        primary_status = sub(r'_\w+$', '', self.status)
+        self.target_pos = self.rect.center + PLAYER_TOOL_OFFSET[primary_status]
+
     def use_tool(self):
-        print('use_tool')
+        if self.selected_tool == 'axe':
+            for tree in self.tree_sprites.sprites():
+                if tree.rect.collidepoint(self.target_pos):
+                    tree.damage()
+        
+        if self.selected_tool == 'hoe':
+            ...
+        
+        if self.selected_tool == 'water':
+            ...
     
     def use_seed(self):
         print('use_seed')
@@ -158,10 +200,24 @@ class Player(sprite.Sprite):
     def update_timers(self):
         list(map(lambda t: t.update(), self.timers.values()))
 
-    def collision(self):
+    def collision(self, direction):
         for sprite in self.collision_sprites.sprites():
-            if hasattr(sprite, 'hitbox') and self.hitbox.colliderect(sprite.hitbox):
-                self.pos = self.last_position
+            if hasattr(sprite, 'hitbox') and sprite.hitbox.colliderect(self.hitbox):
+                is_idle = self.status.endswith('_idle')
+                if direction == 'horizontal' and self.direction.x > 0 and not is_idle:
+                    self.hitbox.right = sprite.hitbox.left
+                
+                elif direction == 'horizontal' and self.direction.x < 0 and not is_idle:
+                    self.hitbox.left = sprite.hitbox.right
+                
+                if direction == 'vertical' and self.direction.y > 0 and not is_idle:
+                    self.hitbox.bottom = sprite.hitbox.top
+                
+                elif direction == 'vertical' and self.direction.y < 0 and not is_idle:
+                    self.hitbox.top = sprite.hitbox.bottom
+
+                self.rect.center = self.hitbox.center
+                self.pos = Vector2(self.hitbox.center)
 
     def update(self, dt):
         self.inputs()
@@ -172,9 +228,8 @@ class Player(sprite.Sprite):
         debug(f'status: {self.status}', (20, 60))
         
         self.update_timers()
+        self.get_target_pos()
         
         self.move(dt)
-        self.collision()
         self.animate(dt)
-        
         # debug(f'{self}')
