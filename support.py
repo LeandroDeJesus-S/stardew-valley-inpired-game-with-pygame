@@ -1,7 +1,9 @@
 from os import walk
 from os.path import join
 from pygame.image import load
-from pygame import font, display
+from pygame import font, display, image
+from os import listdir
+from re import sub
 
 
 def debug(info, pos, color='white', fsize=30):
@@ -20,3 +22,16 @@ def import_folder(path, convert='convert_alpha'):
     return imgs
 
         
+def load_image(path):
+    img = image.load(path)
+    return img.convert_alpha() if img.get_alpha() else img.convert()
+
+
+def import_files_dict(dir):
+        animations = dict(
+            map(
+                lambda f: (sub(r'\.\w{3}$', '', f), load_image(join(dir, f))), 
+                listdir(dir)
+            )
+        )
+        return animations

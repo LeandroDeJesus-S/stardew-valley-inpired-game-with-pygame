@@ -67,7 +67,7 @@ class Tree(Generic):
     def __init__(self, pos, surf, groups, name, add_player_item, z=LAYERS['main']):
         super().__init__(pos, surf, groups, z)
         self.name = name
-
+        self.alive_surf = surf
         self.apple_surf = image.load('graphics/fruit/apple.png').convert_alpha()
         self.apple_pos = APPLE_POS[name]
 
@@ -77,13 +77,14 @@ class Tree(Generic):
         self.health = 5
         self._alive = True
         self.stump_surf = image.load(f'graphics/stumps/{name.lower()}.png').convert_alpha()
-        self.invul_timer = Timer(200)
 
         self.add_player_item = add_player_item
+        self.axe_sound = mixer.Sound('audio/axe.mp3')
 
         self.create_apple()
     
     def damage(self):
+        self.axe_sound.play()
         self.health -= 1
         if len(self.apple_sprites.sprites()):
             random_apple = choice(self.apple_sprites.sprites())
@@ -96,8 +97,9 @@ class Tree(Generic):
             Particle(self.pos, self.image, self.groups(), self.z)
             self.image = self.stump_surf
             self.rect = self.image.get_frect(midbottom=self.rect.midbottom)
-            self.hitbox = self.rect.copy().inflate(-10, self.rect.height * .6)
+            self.hitbox = self.rect.copy().inflate(-10, -self.rect.height * .6)
             self._alive = False
+
             qtt = randint(1, 5) if self.name.lower() == 'small' else randint(5, 10)
             self.add_player_item('wood', qtt)
 
@@ -113,6 +115,13 @@ class Tree(Generic):
                     z=LAYERS['fruit']
                 )
     
+    def reset_tree(self):
+        self.image = self.alive_surf
+        self.rect = self.image.get_frect(topleft=self.rect.topleft)
+        self.hitbox = self.rect.copy().inflate(-10, -self.rect.height * .6)
+        self._alive = True
+        self.health = 5
+
     def update(self, dt) -> None:
         if self._alive:
             self.check_death()

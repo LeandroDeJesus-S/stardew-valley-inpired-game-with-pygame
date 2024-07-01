@@ -16,7 +16,7 @@ class Game:
     
     def run(self):
         while self.running:
-            dt = self.clock.tick() / 1000
+            dt = self.clock.tick(60) / 1000
             if event.get(eventtype=QUIT):
                 self.running = False
             

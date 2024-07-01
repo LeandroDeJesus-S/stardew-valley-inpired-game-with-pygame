@@ -29,4 +29,4 @@ class CameraGroup(sprite.Group):
                 offset_rect.center -= offset
                 self.display_surface.blit(sprite.image, offset_rect)
         
-        debug(f'player_pos: {player_pos} | {player.pos}\noffset_cam: {offset}', (20, 100))
+        # debug(f'player_pos: {player_pos} | {player.pos}\noffset_cam: {offset}', (20, 100))

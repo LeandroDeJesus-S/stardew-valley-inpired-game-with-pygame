@@ -9,7 +9,7 @@ from re import sub
 
 
 class Player(sprite.Sprite):
-    def __init__(self, pos, groups, ground, collision_sprites, tree_sprites, interaction_sprites) -> None:
+    def __init__(self, pos, groups, ground, collision_sprites, tree_sprites, interaction_sprites, soil_layer, toggle_shop) -> None:
         super().__init__(*groups)
         self.ground = ground
 
@@ -49,15 +49,24 @@ class Player(sprite.Sprite):
         # interactions
         self.tree_sprites = tree_sprites
         self.interaction_sprites = interaction_sprites
+        self.soil_layer = soil_layer
         self.sleeping = False
 
         # inventory
         self.inventory = {
-            'wood': 0,
-            'apple': 0,
-            'corn': 0,
-            'tomato': 0,
+            'wood': 10,
+            'apple': 10,
+            'corn': 10,
+            'tomato': 10,
         }
+        self.seed_inventory = {
+            'corn': 5,
+            'tomato': 5
+        }
+        self.money = 200
+
+        # trading
+        self.toggle_shop = toggle_shop
 
         # timer
         self.timers = {
@@ -66,6 +75,8 @@ class Player(sprite.Sprite):
             'seed_use': Timer(600, self.use_seed),
             'seed_change': Timer(600),
         }
+
+        self.watering_sound = mixer.Sound('audio/water.mp3')
     
     @property
     def direction(self):
@@ -127,13 +138,11 @@ class Player(sprite.Sprite):
         if keys[K_RETURN]:
             interactions = sprite.spritecollide(self, self.interaction_sprites, False)
             for interaction in interactions:
-                if interaction.name == 'Trader': ...
+                if interaction.name == 'Trader':
+                    self.toggle_shop()
 
                 if interaction.name == 'Bed':
                     self.sleeping = True
-
-
-
 
     def get_status(self):
         if self.timers['tool_use'].active:
@@ -159,7 +168,6 @@ class Player(sprite.Sprite):
         self.hitbox.centery = self.pos.y
         self.rect.centery = self.hitbox.centery
         self.collision('vertical')
-
 
     def import_assets(self):
         animations = dict(map(lambda ad: (ad, []), os.listdir(self.animations_dir)))
@@ -189,13 +197,16 @@ class Player(sprite.Sprite):
                     tree.damage()
         
         if self.selected_tool == 'hoe':
-            ...
+            self.soil_layer.get_hit(self.target_pos)
         
         if self.selected_tool == 'water':
-            ...
+            self.watering_sound.play()
+            self.soil_layer.water(self.target_pos)
     
     def use_seed(self):
-        print('use_seed')
+        if self.seed_inventory[self.selected_seed] > 0:
+            self.soil_layer.plant_seed(self.target_pos, self.selected_seed)
+            self.seed_inventory[self.selected_seed] -= 1
     
     def update_timers(self):
         list(map(lambda t: t.update(), self.timers.values()))
@@ -221,11 +232,11 @@ class Player(sprite.Sprite):
 
     def update(self, dt):
         self.inputs()
-        debug(f'direction: {self.direction}', (20, 20))
-        debug(f'tool_use: {self.timers["tool_use"].active}', (20, 40))
+        # debug(f'direction: {self.direction}', (20, 20))
+        # debug(f'tool_use: {self.timers["tool_use"].active}', (20, 40))
 
         self.get_status()
-        debug(f'status: {self.status}', (20, 60))
+        # debug(f'status: {self.status}', (20, 60))
         
         self.update_timers()
         self.get_target_pos()
